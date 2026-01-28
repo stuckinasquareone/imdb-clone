@@ -1,5 +1,6 @@
 import logo from './logo.svg';
 import './App.css';
+import PerformanceDashboard from './components/PerformanceDashboard';
 
 function App() {
   return (
@@ -18,6 +19,9 @@ function App() {
           Learn React
         </a>
       </header>
+      
+      {/* Performance Dashboard - Press Ctrl+Shift+P in development mode to toggle */}
+      <PerformanceDashboard />
     </div>
   );
 }
