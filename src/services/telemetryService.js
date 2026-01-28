@@ -9,15 +9,19 @@
  * - Server communication patterns for analytics
  */
 
+import { TELEMETRY_CONFIG } from '../config/telemetryConfig';
+
 class TelemetryService {
-  constructor(backendUrl = '/api/metrics') {
-    this.backendUrl = backendUrl;
+  constructor(backendUrl = null) {
+    const cfg = TELEMETRY_CONFIG || {};
+    this.backendUrl = backendUrl || cfg.BACKEND_URL || '/api/metrics';
     this.metrics = [];
-    this.isDev = process.env.NODE_ENV === 'development';
-    this.batchSize = 10; // Send metrics in batches
-    this.flushInterval = 30000; // 30 seconds
+    this.isDev = cfg.DEBUG || process.env.NODE_ENV === 'development';
+    this.batchSize = cfg.BATCH_SIZE || 10; // Send metrics in batches
+    this.flushInterval = cfg.FLUSH_INTERVAL || 30000; // 30 seconds
     this.sessionId = this.generateSessionId();
-    
+    this.maxRetries = cfg.RETENTION?.MAX_RETRIES || 3;
+
     // Start periodic flush of metrics
     this.startBatchFlush();
   }
@@ -47,10 +51,14 @@ class TelemetryService {
       connection: navigator.connection?.effectiveType || 'unknown',
     };
 
+    // Compute rating using configured thresholds (good / needs-improvement / poor)
+    enrichedMetric.rating = this.computeRating(enrichedMetric);
+
     this.metrics.push(enrichedMetric);
 
     if (this.isDev) {
-      console.log('[Telemetry]', enrichedMetric.name, enrichedMetric.value.toFixed(2), `ms (${enrichedMetric.rating})`);
+      const valueStr = typeof enrichedMetric.value === 'number' ? enrichedMetric.value.toFixed(2) : enrichedMetric.value;
+      console.log('[Telemetry]', enrichedMetric.name, valueStr, `ms (${enrichedMetric.rating})`);
     }
 
     // Send immediately if batch size reached
@@ -137,6 +145,26 @@ class TelemetryService {
       // Re-add metrics to queue if sending failed (simple retry logic)
       this.metrics.unshift(...metricsToSend);
     }
+  }
+
+  /**
+   * Compute rating string for a metric using thresholds from config
+   */
+  computeRating(metric) {
+    if (!metric || typeof metric.value === 'undefined' || !metric.name) return 'unknown';
+
+    const thresholds = TELEMETRY_CONFIG?.THRESHOLDS || {};
+    const name = metric.name;
+    const value = metric.value;
+
+    // If no threshold available, return unknown
+    if (typeof thresholds[name] === 'undefined') return 'unknown';
+
+    const base = thresholds[name];
+    // Simple rule: <= base => good; <= base*1.6 => needs-improvement; else poor
+    if (value <= base) return 'good';
+    if (value <= base * 1.6) return 'needs-improvement';
+    return 'poor';
   }
 
   /**
