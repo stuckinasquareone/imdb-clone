@@ -1,7 +1,10 @@
 import './App.css';
 import MovieWatchProgress from './components/MovieWatchProgress';
 import URLValidator from './components/URLValidator';
+import ReAuthenticationModal from './components/ReAuthenticationModal';
+import SessionManagement from './components/SessionManagement';
 import { useSyncHealthMonitor } from './hooks/useWatchProgressSync';
+import useTokenRotation from './hooks/useTokenRotation';
 import watchProgressSyncService from './services/watchProgressSyncService';
 import { useEffect, useState } from 'react';
 
@@ -9,6 +12,21 @@ function App() {
   const health = useSyncHealthMonitor();
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [movieId, setMovieId] = useState('movie_shawshank');
+  
+  // Token rotation hook
+  const {
+    isAuthenticated,
+    currentToken,
+    sessionHistory,
+    suspiciousActivity,
+    isReAuthRequired,
+    rotationStatus,
+    lastRotationTime,
+    manualRotate,
+    handleReAuthentication,
+    dismissAlert,
+    logout
+  } = useTokenRotation();
 
   // Handle online/offline status
   useEffect(() => {
@@ -130,7 +148,28 @@ function App() {
           <h3>URL Validator</h3>
           <URLValidator />
         </section>
+
+        <section className="security-section">
+          <h3>🔒 Token Rotation & Session Security</h3>
+          <SessionManagement
+            isAuthenticated={isAuthenticated}
+            currentToken={currentToken}
+            sessionHistory={sessionHistory}
+            rotationStatus={rotationStatus}
+            lastRotationTime={lastRotationTime}
+            onManualRotate={manualRotate}
+            onLogout={logout}
+          />
+        </section>
       </main>
+
+      {/* Re-authentication Modal */}
+      <ReAuthenticationModal
+        isOpen={isReAuthRequired}
+        suspiciousActivity={suspiciousActivity}
+        onReAuthenticate={handleReAuthentication}
+        isLoading={rotationStatus === 'reauth_in_progress'}
+      />
 
       <footer className="app-footer">
         <p>
