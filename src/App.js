@@ -5,11 +5,13 @@ import ReAuthenticationModal from './components/ReAuthenticationModal';
 import SessionManagement from './components/SessionManagement';
 import ValidationAlert from './components/ValidationAlert';
 import ContractMonitor from './components/ContractMonitor';
+import MovieCard, { MovieCardGrid } from './components/MovieCard';
 import { useSyncHealthMonitor } from './hooks/useWatchProgressSync';
 import useTokenRotation from './hooks/useTokenRotation';
 import watchProgressSyncService from './services/watchProgressSyncService';
 import apiContractValidator from './services/apiSchemaValidator';
 import { AllSchemas } from './config/apiSchemas';
+import { sampleMovies, getRandomMovies, getTopRatedMovies } from './data/sampleMovies';
 import { useEffect, useState } from 'react';
 
 function App() {
@@ -17,6 +19,9 @@ function App() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [movieId, setMovieId] = useState('movie_shawshank');
   const [validationError, setValidationError] = useState(null);
+  const [selectedMovie, setSelectedMovie] = useState(null);
+  const [randomMovies] = useState(() => getRandomMovies(6));
+  const [topRatedMovies] = useState(() => getTopRatedMovies(5));
   
   // Token rotation hook
   const {
@@ -182,6 +187,77 @@ function App() {
           <h3>📋 API Contract Validation</h3>
           <ContractMonitor />
         </section>
+
+        <section className="movies-section">
+          <h3>🎬 Movie Catalog</h3>
+          <MovieCardGrid
+            movies={randomMovies}
+            title="Featured Movies"
+            onMovieClick={setSelectedMovie}
+            showGenre={true}
+            columns={6}
+          />
+        </section>
+
+        <section className="movies-section">
+          <MovieCardGrid
+            movies={topRatedMovies}
+            title="Top Rated"
+            onMovieClick={setSelectedMovie}
+            showDirector={true}
+            showSynopsis={true}
+            columns={5}
+          />
+        </section>
+
+        {selectedMovie && (
+          <section className="movie-details-section">
+            <button
+              className="close-details-btn"
+              onClick={() => setSelectedMovie(null)}
+              aria-label="Close movie details"
+            >
+              ✕
+            </button>
+            <div className="movie-details">
+              <div className="details-poster">
+                <img
+                  src={selectedMovie.poster}
+                  alt={`${selectedMovie.title} poster`}
+                />
+              </div>
+              <div className="details-content">
+                <h2>{selectedMovie.title}</h2>
+                <div className="details-meta">
+                  <span className="year">{selectedMovie.releaseYear}</span>
+                  <span className="separator">•</span>
+                  <span className="runtime">{selectedMovie.runtime} min</span>
+                  <span className="separator">•</span>
+                  <span className="rating">⭐ {selectedMovie.rating}/10</span>
+                </div>
+                <div className="details-genres">
+                  {selectedMovie.genre.map((g, idx) => (
+                    <span key={idx} className="genre-badge">
+                      {g}
+                    </span>
+                  ))}
+                </div>
+                <div className="details-director">
+                  <strong>Director:</strong> {selectedMovie.director}
+                </div>
+                <div className="details-votes">
+                  <strong>Votes:</strong> {selectedMovie.votes.toLocaleString()}
+                </div>
+                <p className="details-synopsis">{selectedMovie.synopsis}</p>
+                <div className="details-actions">
+                  <button className="details-btn primary">▶️ Watch Now</button>
+                  <button className="details-btn secondary">➕ Add to Watchlist</button>
+                  <button className="details-btn secondary">⭐ Rate</button>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
       </main>
 
       {/* Re-authentication Modal */}
