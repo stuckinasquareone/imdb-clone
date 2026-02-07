@@ -1,5 +1,6 @@
 import './App.css';
 import MovieWatchProgress from './components/MovieWatchProgress';
+import URLValidator from './components/URLValidator';
 import { useSyncHealthMonitor } from './hooks/useWatchProgressSync';
 import watchProgressSyncService from './services/watchProgressSyncService';
 import { useEffect, useState } from 'react';
@@ -123,6 +124,11 @@ function App() {
               Device ID: <code>{watchProgressSyncService.deviceId}</code>
             </div>
           </div>
+        </section>
+
+        <section className="validator-section">
+          <h3>URL Validator</h3>
+          <URLValidator />
         </section>
       </main>
 

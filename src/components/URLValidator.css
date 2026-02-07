@@ -1,0 +1,64 @@
+.url-validator {
+  max-width: 640px;
+  margin: 16px 0;
+  padding: 12px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #ffffff, #fbfbff);
+  box-shadow: 0 1px 3px rgba(16,24,40,0.04), 0 8px 24px rgba(16,24,40,0.06);
+  font-family: inherit;
+}
+
+.uv-label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.uv-input-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.uv-input {
+  flex: 1 1 auto;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  font-size: 14px;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.uv-input:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 4px rgba(99,102,241,0.08);
+}
+
+.uv-input.valid {
+  border-color: #10b981;
+}
+
+.uv-input.invalid {
+  border-color: #ef4444;
+}
+
+.uv-status {
+  min-width: 120px;
+  text-align: right;
+  font-weight: 600;
+}
+
+.uv-status.ok {
+  color: #047857;
+}
+
+.uv-status.err {
+  color: #b91c1c;
+}
+
+.uv-help {
+  margin-top: 8px;
+  color: #6b7280;
+  font-size: 13px;
+}
