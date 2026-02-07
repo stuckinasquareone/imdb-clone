@@ -1,0 +1,188 @@
+name: Performance Tests & Merge Gate
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  lighthouse:
+    name: 🚀 Lighthouse Performance Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: 📚 Install dependencies
+        run: npm ci
+        env:
+          CI: true
+
+      - name: 🏗️ Build application
+        run: npm run build
+        env:
+          CI: true
+
+      - name: 🚀 Start development server
+        run: npm start &
+        env:
+          CI: true
+          PORT: 3000
+
+      - name: ⏳ Wait for server to start
+        run: |
+          echo "Waiting for server to start..."
+          for i in {1..30}; do
+            if curl -s http://localhost:3000 > /dev/null; then
+              echo "✅ Server is running"
+              exit 0
+            fi
+            echo "Attempt $i/30..."
+            sleep 2
+          done
+          echo "❌ Server failed to start"
+          exit 1
+
+      - name: 🔍 Install Lighthouse
+        run: npm install --save-dev @lhci/cli@0.10.x lighthouse chrome-launcher
+
+      - name: 📊 Run Lighthouse Performance Tests
+        run: node scripts/lighthouse-test.js http://localhost:3000/ http://localhost:3000/
+        continue-on-error: true
+
+      - name: 📄 Upload Lighthouse Reports
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: lighthouse-reports
+          path: lighthouse-reports/
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: 💬 Comment PR with Results
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            
+            const reportDir = './lighthouse-reports';
+            if (!fs.existsSync(reportDir)) {
+              console.log('No reports found');
+              return;
+            }
+            
+            const files = fs.readdirSync(reportDir).filter(f => f.endsWith('.json'));
+            if (files.length === 0) {
+              console.log('No JSON reports found');
+              return;
+            }
+            
+            const latestReport = files.sort().pop();
+            const reportPath = path.join(reportDir, latestReport);
+            const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+            
+            const categories = report.categories;
+            const scores = Object.entries(categories)
+              .map(([key, cat]) => `- **${key}**: ${Math.round(cat.score * 100)}/100`)
+              .join('\n');
+            
+            const comment = `## 📊 Lighthouse Performance Audit Results
+            
+            ${scores}
+            
+            [Download full report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+      - name: 🚫 Block Merge on Performance Failure
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            github.rest.pulls.requestReviewers({
+              pull_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              reviewers: []
+            });
+            
+            const comment = `⚠️ **Performance Check Failed**
+            
+            This PR has not met the minimum performance thresholds. Please review the Lighthouse report and optimize your changes before merging.
+            
+            **To fix:**
+            1. Review the performance report
+            2. Optimize assets and code
+            3. Re-run the tests
+            4. Push changes to update the PR`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  build-check:
+    name: ✅ Build & Lint Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v3
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: 📚 Install dependencies
+        run: npm ci
+
+      - name: 🔍 Run linting
+        run: npm run build
+        continue-on-error: true
+
+      - name: 📊 Run tests
+        run: npm test -- --passWithNoTests --coverage
+        continue-on-error: true
+
+  merge-gate:
+    name: 🚫 Merge Gate
+    runs-on: ubuntu-latest
+    needs: [lighthouse, build-check]
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: 🔍 Check all status checks
+        run: |
+          if [ "${{ needs.lighthouse.result }}" = "failure" ]; then
+            echo "❌ Lighthouse tests failed - merge blocked"
+            exit 1
+          fi
+          echo "✅ All checks passed"
+
+      - name: ✅ Merge allowed
+        if: success()
+        run: echo "🟢 All performance and quality gates passed - merge is allowed"

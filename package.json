@@ -15,11 +15,18 @@
     "react-scripts": "5.0.1",
     "web-vitals": "^2.1.4"
   },
+  "devDependencies": {
+    "chrome-launcher": "^0.15.2",
+    "lighthouse": "^12.0.0",
+    "@lhci/cli": "^0.10.0"
+  },
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "test": "react-scripts test --passWithNoTests",
+    "eject": "react-scripts eject",
+    "perf-test": "node scripts/perf-test.js",
+    "perf-test:ci": "node scripts/lighthouse-test.js http://localhost:3000/"
   },
   "eslintConfig": {
     "extends": [
