@@ -1,10 +1,14 @@
 /**
  * Movie Watch Progress Component
  * Demonstrates watch progress synchronization across devices
+ * Integrates age verification for adult content
  */
 
 import React, { useState, useCallback } from 'react';
 import { useWatchProgressSync, useSyncHealthMonitor } from '../hooks/useWatchProgressSync';
+import useAgeVerification from '../hooks/useAgeVerification';
+import AgeGatedContent from './AgeGatedContent';
+import { isAdultContent } from '../services/moviesDatabase';
 import './MovieWatchProgress.css';
 
 const MovieWatchProgress = ({ movieId, movieTitle, totalDuration = 120 }) => {
@@ -15,15 +19,16 @@ const MovieWatchProgress = ({ movieId, movieTitle, totalDuration = 120 }) => {
     isSyncing,
     isOnline,
     conflictDetected,
-    consistencyStatus,
     updateProgress,
     triggerSync,
     recoverState,
     getSyncQueueStatus,
     resolveConflictManually,
-    isPending,
     isSyncNeeded
   } = useWatchProgressSync(movieId);
+
+  const { isVerified, verifyAge } = useAgeVerification();
+  const requiresAgeGate = isAdultContent(movieId);
 
   const health = useSyncHealthMonitor();
 
@@ -82,7 +87,13 @@ const MovieWatchProgress = ({ movieId, movieTitle, totalDuration = 120 }) => {
   };
 
   return (
-    <div className="movie-watch-progress">
+    <AgeGatedContent
+      isVerified={!requiresAgeGate || isVerified}
+      onVerify={verifyAge}
+      title={movieTitle}
+      description="This movie contains adult content and is restricted to viewers 18 years or older."
+    >
+      <div className="movie-watch-progress">
       <div className="progress-header">
         <div className="progress-title-section">
           <h3>{movieTitle}</h3>
@@ -230,7 +241,8 @@ const MovieWatchProgress = ({ movieId, movieTitle, totalDuration = 120 }) => {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </AgeGatedContent>
   );
 };
 
