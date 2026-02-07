@@ -289,6 +289,26 @@
   gap: 8px;
 }
 
+/* Contract Section Styles */
+.contract-section {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.98));
+  padding: 32px;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  margin-bottom: 32px;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.contract-section h3 {
+  margin: 0 0 24px 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: #1f2937;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 @media (max-width: 480px) {
   .app-header h1 {
     font-size: 18px;
@@ -297,7 +317,8 @@
   .demo-section h2,
   .info-section h3,
   .debug-section h3,
-  .security-section h3 {
+  .security-section h3,
+  .contract-section h3 {
     font-size: 18px;
   }
 
@@ -306,6 +327,10 @@
   }
 
   .security-section {
+    padding: 16px;
+  }
+
+  .contract-section {
     padding: 16px;
   }
 }

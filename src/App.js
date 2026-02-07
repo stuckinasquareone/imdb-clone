@@ -3,15 +3,20 @@ import MovieWatchProgress from './components/MovieWatchProgress';
 import URLValidator from './components/URLValidator';
 import ReAuthenticationModal from './components/ReAuthenticationModal';
 import SessionManagement from './components/SessionManagement';
+import ValidationAlert from './components/ValidationAlert';
+import ContractMonitor from './components/ContractMonitor';
 import { useSyncHealthMonitor } from './hooks/useWatchProgressSync';
 import useTokenRotation from './hooks/useTokenRotation';
 import watchProgressSyncService from './services/watchProgressSyncService';
+import apiContractValidator from './services/apiSchemaValidator';
+import { AllSchemas } from './config/apiSchemas';
 import { useEffect, useState } from 'react';
 
 function App() {
   const health = useSyncHealthMonitor();
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [movieId, setMovieId] = useState('movie_shawshank');
+  const [validationError, setValidationError] = useState(null);
   
   // Token rotation hook
   const {
@@ -46,8 +51,19 @@ function App() {
   useEffect(() => {
     console.log('✅ Watch Progress Sync System Initialized');
     console.log('Device ID:', watchProgressSyncService.deviceId);
+    
+    // Register API schemas for validation
+    apiContractValidator.registerSchemas(AllSchemas);
+    
+    // Listen for validation errors
+    const unsubscribe = apiContractValidator.onValidationError((result) => {
+      setValidationError(result);
+      console.warn('API Contract Validation Error:', result);
+    });
+    
     return () => {
       watchProgressSyncService.destroy();
+      unsubscribe();
     };
   }, []);
 
@@ -161,6 +177,11 @@ function App() {
             onLogout={logout}
           />
         </section>
+
+        <section className="contract-section">
+          <h3>📋 API Contract Validation</h3>
+          <ContractMonitor />
+        </section>
       </main>
 
       {/* Re-authentication Modal */}
@@ -170,6 +191,15 @@ function App() {
         onReAuthenticate={handleReAuthentication}
         isLoading={rotationStatus === 'reauth_in_progress'}
       />
+
+      {/* Validation Error Alert */}
+      {validationError && (
+        <ValidationAlert
+          error={validationError}
+          onDismiss={() => setValidationError(null)}
+          autoClose={true}
+        />
+      )}
 
       <footer className="app-footer">
         <p>
